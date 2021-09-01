@@ -1,5 +1,14 @@
 package member
 
+type InputDataContainer struct {
+	Data InputDataBody `json:"data"`
+}
+
+type InputDataBody struct {
+	Type       string     `json:"type"`
+	Attributes Attributes `json:"attributes"`
+}
+
 type Attributes struct {
 	WorldId     byte   `json:"world_id"`
 	ChannelId   byte   `json:"channel_id"`

@@ -2,7 +2,9 @@ package party
 
 import (
 	"atlas-party/json"
+	"atlas-party/kafka/producers"
 	"atlas-party/party/member"
+	"atlas-party/rest/resource"
 	"atlas-party/rest/response"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -18,6 +20,7 @@ func InitResource(router *mux.Router, l logrus.FieldLogger) {
 	r.HandleFunc("/{id}", ParseId(l, HandleGetParty)).Methods(http.MethodGet).Queries("include", "{include}")
 	r.HandleFunc("/{id}", ParseId(l, HandleGetParty)).Methods(http.MethodGet)
 	r.HandleFunc("/{id}/members", ParseId(l, HandleGetMembers)).Methods(http.MethodGet)
+	r.HandleFunc("/{id}/members", ParseId(l, HandleJoinParty)).Methods(http.MethodPut)
 }
 
 type IdHandler func(l logrus.FieldLogger, partyId uint32) http.HandlerFunc
@@ -113,13 +116,35 @@ func HandleGetMembers(l logrus.FieldLogger, partyId uint32) http.HandlerFunc {
 			return
 		}
 
-		result := response.NewDataContainer(true)
-		result.AddData(p.Id(), "members", member.MakeAttributes(p.Members()), nil)
+		result := response.NewDataContainer(false)
+		for _, m := range p.Members() {
+			result.AddData(m.Id(), "members", member.MakeAttribute(m), nil)
+		}
 
 		err = json.ToJSON(result, w)
 		if err != nil {
 			l.WithError(err).Errorf("Encoding response")
 			w.WriteHeader(http.StatusInternalServerError)
 		}
+	}
+}
+
+func HandleJoinParty(l logrus.FieldLogger, partyId uint32) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		li := &member.InputDataContainer{}
+		err := json.FromJSON(li, r.Body)
+		if err != nil {
+			l.WithError(err).Errorf("Deserializing input.")
+			w.WriteHeader(http.StatusBadRequest)
+			err = json.ToJSON(&resource.GenericError{Message: err.Error()}, w)
+			if err != nil {
+				l.WithError(err).Fatalf("Writing error message.")
+			}
+			return
+		}
+
+		attr := li.Data.Attributes
+		producers.JoinParty(l)(attr.WorldId, attr.ChannelId, partyId, attr.CharacterId)
+		w.WriteHeader(http.StatusAccepted)
 	}
 }

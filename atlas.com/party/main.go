@@ -1,6 +1,7 @@
 package main
 
 import (
+	"atlas-party/kafka/consumers"
 	"atlas-party/logger"
 	"atlas-party/party"
 	"atlas-party/rest"
@@ -18,12 +19,9 @@ func main() {
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	//consumers.CreateEventConsumers(l, ctx, wg)
+	consumers.CreateEventConsumers(l, ctx, wg)
 
 	rest.CreateService(l, ctx, wg, "/ms/party", party.InitResource)
-
-	party.GetRegistry().Create(1, 1, 1)
-	party.GetRegistry().Create(1, 1, 2)
 
 	// trap sigterm or interrupt and gracefully shutdown the server
 	c := make(chan os.Signal, 1)
