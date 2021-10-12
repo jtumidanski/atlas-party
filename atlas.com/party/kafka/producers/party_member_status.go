@@ -1,6 +1,9 @@
 package producers
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/opentracing/opentracing-go"
+	"github.com/sirupsen/logrus"
+)
 
 type partyMemberStatusEvent struct {
 	WorldId     byte   `json:"world_id"`
@@ -10,50 +13,50 @@ type partyMemberStatusEvent struct {
 	Type        string `json:"type"`
 }
 
-func PartyMemberLogin(l logrus.FieldLogger) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
-	producer := ProduceEvent(l, "TOPIC_PARTY_MEMBER_STATUS")
+func PartyMemberLogin(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
+	producer := ProduceEvent(l, span, "TOPIC_PARTY_MEMBER_STATUS")
 	return func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
 		emitPartyMemberStatus(producer, worldId, channelId, partyId, characterId, "LOGIN")
 	}
 }
 
-func PartyMemberLogout(l logrus.FieldLogger) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
-	producer := ProduceEvent(l, "TOPIC_PARTY_MEMBER_STATUS")
+func PartyMemberLogout(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
+	producer := ProduceEvent(l, span, "TOPIC_PARTY_MEMBER_STATUS")
 	return func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
 		emitPartyMemberStatus(producer, worldId, channelId, partyId, characterId, "LOGOUT")
 	}
 }
 
-func PartyMemberJoin(l logrus.FieldLogger) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
-	producer := ProduceEvent(l, "TOPIC_PARTY_MEMBER_STATUS")
+func PartyMemberJoin(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
+	producer := ProduceEvent(l, span, "TOPIC_PARTY_MEMBER_STATUS")
 	return func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
 		emitPartyMemberStatus(producer, worldId, channelId, partyId, characterId, "JOINED")
 	}
 }
 
-func PartyMemberLeave(l logrus.FieldLogger) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
-	producer := ProduceEvent(l, "TOPIC_PARTY_MEMBER_STATUS")
+func PartyMemberLeave(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
+	producer := ProduceEvent(l, span, "TOPIC_PARTY_MEMBER_STATUS")
 	return func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
 		emitPartyMemberStatus(producer, worldId, channelId, partyId, characterId, "LEFT")
 	}
 }
 
-func PartyMemberExpelled(l logrus.FieldLogger) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
-	producer := ProduceEvent(l, "TOPIC_PARTY_MEMBER_STATUS")
+func PartyMemberExpelled(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
+	producer := ProduceEvent(l, span, "TOPIC_PARTY_MEMBER_STATUS")
 	return func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
 		emitPartyMemberStatus(producer, worldId, channelId, partyId, characterId, "EXPELLED")
 	}
 }
 
-func PartyMemberDisbanded(l logrus.FieldLogger) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
-	producer := ProduceEvent(l, "TOPIC_PARTY_MEMBER_STATUS")
+func PartyMemberDisbanded(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
+	producer := ProduceEvent(l, span, "TOPIC_PARTY_MEMBER_STATUS")
 	return func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
 		emitPartyMemberStatus(producer, worldId, channelId, partyId, characterId, "DISBANDED")
 	}
 }
 
-func PartyMemberPromoted(l logrus.FieldLogger) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
-	producer := ProduceEvent(l, "TOPIC_PARTY_MEMBER_STATUS")
+func PartyMemberPromoted(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
+	producer := ProduceEvent(l, span, "TOPIC_PARTY_MEMBER_STATUS")
 	return func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
 		emitPartyMemberStatus(producer, worldId, channelId, partyId, characterId, "PROMOTED")
 	}

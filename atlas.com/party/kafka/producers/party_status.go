@@ -1,6 +1,9 @@
 package producers
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/opentracing/opentracing-go"
+	"github.com/sirupsen/logrus"
+)
 
 type partyStatusEvent struct {
 	WorldId     byte   `json:"world_id"`
@@ -9,15 +12,15 @@ type partyStatusEvent struct {
 	Type        string `json:"type"`
 }
 
-func PartyCreated(l logrus.FieldLogger) func(worldId byte, partyId uint32, characterId uint32) {
-	producer := ProduceEvent(l, "TOPIC_PARTY_STATUS")
+func PartyCreated(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, partyId uint32, characterId uint32) {
+	producer := ProduceEvent(l, span, "TOPIC_PARTY_STATUS")
 	return func(worldId byte, partyId uint32, characterId uint32) {
 		emitPartyStatus(producer, worldId, partyId, characterId, "CREATED")
 	}
 }
 
-func PartyDisbanded(l logrus.FieldLogger) func(worldId byte, partyId uint32, characterId uint32) {
-	producer := ProduceEvent(l, "TOPIC_PARTY_STATUS")
+func PartyDisbanded(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, partyId uint32, characterId uint32) {
+	producer := ProduceEvent(l, span, "TOPIC_PARTY_STATUS")
 	return func(worldId byte, partyId uint32, characterId uint32) {
 		emitPartyStatus(producer, worldId, partyId, characterId, "DISBANDED")
 	}

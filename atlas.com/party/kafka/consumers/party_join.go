@@ -3,6 +3,7 @@ package consumers
 import (
 	"atlas-party/kafka/handler"
 	"atlas-party/party"
+	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,9 +21,9 @@ func EmptyPartyJoinCommandCreator() handler.EmptyEventCreator {
 }
 
 func HandlePartyJoinCommand() handler.EventHandler {
-	return func(l logrus.FieldLogger, e interface{}) {
+	return func(l logrus.FieldLogger, span opentracing.Span, e interface{}) {
 		if event, ok := e.(*partyJoinCommand); ok {
-			party.Join(l)(event.WorldId, event.ChannelId, event.PartyId, event.CharacterId)
+			party.Join(l, span)(event.WorldId, event.ChannelId, event.PartyId, event.CharacterId)
 		} else {
 			l.Errorf("Unable to cast event provided to handler")
 		}

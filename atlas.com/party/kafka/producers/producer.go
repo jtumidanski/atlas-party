@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"github.com/opentracing/opentracing-go"
 	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
 	"os"
@@ -18,8 +19,8 @@ func CreateKey(key int) []byte {
 	return b
 }
 
-func ProduceEvent(l logrus.FieldLogger, topicToken string) func(key []byte, event interface{}) {
-	name := topic.GetRegistry().Get(l, topicToken)
+func ProduceEvent(l logrus.FieldLogger, span opentracing.Span, topicToken string) func(key []byte, event interface{}) {
+	name := topic.GetRegistry().Get(l, span, topicToken)
 	w := &kafka.Writer{
 		Addr:         kafka.TCP(os.Getenv("BOOTSTRAP_SERVERS")),
 		Topic:        name,
@@ -35,12 +36,20 @@ func ProduceEvent(l logrus.FieldLogger, topicToken string) func(key []byte, even
 		}
 
 		writeMessage := func(attempt int) (bool, error) {
-			err = w.WriteMessages(context.Background(), kafka.Message{
-				Key:   key,
-				Value: r,
-			})
+			m := kafka.Message{Key: key, Value: r}
+			headers := make(map[string]string)
+			err = opentracing.GlobalTracer().Inject(span.Context(), opentracing.TextMap, opentracing.TextMapCarrier(headers))
 			if err != nil {
-				l.Warnf("Unable to emit event on topic %s, will retry.", name)
+				l.WithError(err).Warnf("Unable to inject OpenTracing information.")
+				return false, err
+			}
+			for k, v := range headers {
+				m.Headers = append(m.Headers, kafka.Header{Key: k, Value: []byte(v)})
+			}
+
+			err = w.WriteMessages(context.Background(), m)
+			if err != nil {
+				l.WithError(err).Warnf("Unable to emit event on topic %s, will retry.", name)
 				return true, err
 			}
 			return false, err

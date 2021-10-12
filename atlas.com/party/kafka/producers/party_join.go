@@ -1,6 +1,9 @@
 package producers
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/opentracing/opentracing-go"
+	"github.com/sirupsen/logrus"
+)
 
 type partyJoinCommand struct {
 	WorldId     byte   `json:"world_id"`
@@ -9,8 +12,8 @@ type partyJoinCommand struct {
 	PartyId     uint32 `json:"party_id"`
 }
 
-func JoinParty(l logrus.FieldLogger) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
-	producer := ProduceEvent(l, "TOPIC_PARTY_JOIN")
+func JoinParty(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
+	producer := ProduceEvent(l, span, "TOPIC_PARTY_JOIN")
 	return func(worldId byte, channelId byte, partyId uint32, characterId uint32) {
 		e := &partyJoinCommand{
 			WorldId:     worldId,
