@@ -1,6 +1,7 @@
 package main
 
 import (
+	"atlas-party/character"
 	"atlas-party/kafka/consumers"
 	"atlas-party/logger"
 	"atlas-party/party"
@@ -36,7 +37,7 @@ func main() {
 
 	consumers.CreateEventConsumers(l, ctx, wg)
 
-	rest.CreateService(l, ctx, wg, "/ms/party", party.InitResource)
+	rest.CreateService(l, ctx, wg, "/ms/party", party.InitResource, character.InitResource)
 
 	// trap sigterm or interrupt and gracefully shutdown the server
 	c := make(chan os.Signal, 1)

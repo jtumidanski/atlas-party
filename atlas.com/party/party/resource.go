@@ -65,7 +65,7 @@ func handleGetAllParties(l logrus.FieldLogger) rest.SpanHandler {
 
 			result := response.NewDataContainer(false)
 			for _, p := range ps {
-				result.AddData(p.Id(), "parties", MakeAttribute(p), makePartyRelationships(p))
+				result.AddData(p.Id(), "parties", MakeAttribute(p), MakePartyRelationships(p))
 				if strings.Contains(mux.Vars(r)["include"], "members") {
 					for _, m := range p.Members() {
 						result.AddIncluded(m.Id(), "members", member.MakeAttribute(m))
@@ -95,14 +95,14 @@ func handleGetParty(l logrus.FieldLogger) func(span opentracing.Span) func(party
 	return func(span opentracing.Span) func(partyId uint32) http.HandlerFunc {
 		return func(partyId uint32) http.HandlerFunc {
 			return func(w http.ResponseWriter, r *http.Request) {
-				p, err := GetById(partyId)
+				p, err := GetById(l, span)(partyId)
 				if err != nil {
 					w.WriteHeader(http.StatusNotFound)
 					return
 				}
 
 				result := response.NewDataContainer(true)
-				result.AddData(p.Id(), "parties", MakeAttribute(p), makePartyRelationships(p))
+				result.AddData(p.Id(), "parties", MakeAttribute(p), MakePartyRelationships(p))
 				if strings.Contains(mux.Vars(r)["include"], "members") {
 					for _, m := range p.Members() {
 						result.AddIncluded(m.Id(), "members", member.MakeAttribute(m))
@@ -119,7 +119,7 @@ func handleGetParty(l logrus.FieldLogger) func(span opentracing.Span) func(party
 	}
 }
 
-func makePartyRelationships(p *Model) map[string]*response.Relationship {
+func MakePartyRelationships(p *Model) map[string]*response.Relationship {
 	result := make(map[string]*response.Relationship, 0)
 	result["members"] = &response.Relationship{
 		ToOneType: false,
@@ -155,7 +155,7 @@ func handleGetMembers(l logrus.FieldLogger) func(span opentracing.Span) func(par
 	return func(span opentracing.Span) func(partyId uint32) http.HandlerFunc {
 		return func(partyId uint32) http.HandlerFunc {
 			return func(w http.ResponseWriter, r *http.Request) {
-				p, err := GetById(partyId)
+				p, err := GetById(l, span)(partyId)
 				if err != nil {
 					w.WriteHeader(http.StatusNotFound)
 					return

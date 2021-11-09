@@ -6,8 +6,34 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func GetById(partyId uint32) (*Model, error) {
-	return GetRegistry().Get(partyId)
+type ModelProvider func() (*Model, error)
+
+func ByIdModelProvider(_ logrus.FieldLogger, _ opentracing.Span) func(partyId uint32) ModelProvider {
+	return func(partyId uint32) ModelProvider {
+		return func() (*Model, error) {
+			return GetRegistry().Get(partyId)
+		}
+	}
+}
+
+func ByMemberModelProvider(_ logrus.FieldLogger, _ opentracing.Span) func(characterId uint32) ModelProvider {
+	return func(characterId uint32) ModelProvider {
+		return func() (*Model, error) {
+			return GetRegistry().GetForMember(characterId)
+		}
+	}
+}
+
+func GetById(l logrus.FieldLogger, span opentracing.Span) func(partyId uint32) (*Model, error) {
+	return func(partyId uint32) (*Model, error) {
+		return ByIdModelProvider(l, span)(partyId)()
+	}
+}
+
+func GetByMember(l logrus.FieldLogger, span opentracing.Span) func(characterId uint32) (*Model, error) {
+	return func(characterId uint32) (*Model, error) {
+		return ByMemberModelProvider(l, span)(characterId)()
+	}
 }
 
 func GetAll() []*Model {

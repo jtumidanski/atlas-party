@@ -162,6 +162,18 @@ func (r *registry) GetAll() []*Model {
 	return result
 }
 
+func (r *registry) GetForMember(characterId uint32) (*Model, error) {
+	r.lock.RLock()
+	if pid, ok := r.characterParty[characterId]; ok {
+		if val, ok := r.parties[pid]; ok {
+			r.lock.RUnlock()
+			return val, nil
+		}
+	}
+	r.lock.RUnlock()
+	return nil, errors.New("unable to locate party for member")
+}
+
 func (r *registry) getNextId() uint32 {
 	ids := existingIds(r.parties)
 
