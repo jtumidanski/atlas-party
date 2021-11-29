@@ -16,20 +16,64 @@ import (
 )
 
 const (
+	CreateParty   = "create_party"
 	GetAllParties = "get_all_parties"
 	GetParty      = "get_party"
 	GetMembers    = "get_members"
 	JoinParty     = "join_party"
+	LeaveParty    = "leave_party"
 )
 
 func InitResource(router *mux.Router, l logrus.FieldLogger) {
 	r := router.PathPrefix("/parties").Subrouter()
 	r.HandleFunc("", registerGetAllParties(l)).Methods(http.MethodGet).Queries("include", "{include}")
 	r.HandleFunc("", registerGetAllParties(l)).Methods(http.MethodGet)
+	r.HandleFunc("", registerCreateParty(l)).Methods(http.MethodPost)
 	r.HandleFunc("/{id}", registerGetParty(l)).Methods(http.MethodGet).Queries("include", "{include}")
 	r.HandleFunc("/{id}", registerGetParty(l)).Methods(http.MethodGet)
 	r.HandleFunc("/{id}/members", registerGetMembers(l)).Methods(http.MethodGet)
 	r.HandleFunc("/{id}/members", registerJoinParty(l)).Methods(http.MethodPut)
+	r.HandleFunc("/{id}/members/{memberId}", registerLeaveParty(l)).Methods(http.MethodDelete)
+}
+
+func registerLeaveParty(l logrus.FieldLogger) http.HandlerFunc {
+	return rest.RetrieveSpan(LeaveParty, func(span opentracing.Span) http.HandlerFunc {
+		return ParseId(l, func(partyId uint32) http.HandlerFunc {
+			return ParseMemberId(l, func(memberId uint32) http.HandlerFunc {
+				return ParseCreateInput(l, func(input *inputDataContainer) http.HandlerFunc {
+					return handleLeaveParty(l)(span)(partyId)(memberId)(input)
+				})
+			})
+		})
+	})
+}
+
+func handleLeaveParty(l logrus.FieldLogger) func(span opentracing.Span) func(partyId uint32) func(memberId uint32) func(input *inputDataContainer) http.HandlerFunc {
+	return func(span opentracing.Span) func(partyId uint32) func(memberId uint32) func(input *inputDataContainer) http.HandlerFunc {
+		return func(partyId uint32) func(memberId uint32) func(input *inputDataContainer) http.HandlerFunc {
+			return func(memberId uint32) func(input *inputDataContainer) http.HandlerFunc {
+				return func(input *inputDataContainer) http.HandlerFunc {
+					return func(w http.ResponseWriter, r *http.Request) {
+						producers.LeaveParty(l, span)(input.Data.Attributes.WorldId, input.Data.Attributes.ChannelId, memberId)
+					}
+				}
+			}
+		}
+	}
+}
+
+type MemberIdHandler func(memberId uint32) http.HandlerFunc
+
+func ParseMemberId(l logrus.FieldLogger, next MemberIdHandler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		memberId, err := strconv.Atoi(mux.Vars(r)["memberId"])
+		if err != nil {
+			l.WithError(err).Errorf("Unable to properly parse memberId from path.")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		next(uint32(memberId))(w, r)
+	}
 }
 
 func registerJoinParty(l logrus.FieldLogger) http.HandlerFunc {
@@ -44,13 +88,51 @@ type IdHandler func(partyId uint32) http.HandlerFunc
 
 func ParseId(l logrus.FieldLogger, next IdHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		reactorId, err := strconv.Atoi(mux.Vars(r)["id"])
+		id, err := strconv.Atoi(mux.Vars(r)["id"])
 		if err != nil {
-			l.WithError(err).Errorf("Unable to properly parse reactorId from path.")
+			l.WithError(err).Errorf("Unable to properly parse id from path.")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		next(uint32(reactorId))(w, r)
+		next(uint32(id))(w, r)
+	}
+}
+
+func registerCreateParty(l logrus.FieldLogger) http.HandlerFunc {
+	return rest.RetrieveSpan(CreateParty, func(span opentracing.Span) http.HandlerFunc {
+		return ParseCreateInput(l, func(input *inputDataContainer) http.HandlerFunc {
+			return handleCreateParty(l)(span)(input)
+		})
+	})
+}
+
+type CreateInputHandler func(input *inputDataContainer) http.HandlerFunc
+
+func ParseCreateInput(l logrus.FieldLogger, next CreateInputHandler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		i := &inputDataContainer{}
+		err := json.FromJSON(i, r.Body)
+		if err != nil {
+			l.WithError(err).Errorf("Deserializing input")
+			w.WriteHeader(http.StatusBadRequest)
+			err := json.ToJSON(&resource.GenericError{Message: err.Error()}, w)
+			if err != nil {
+				l.WithError(err).Errorf("Unable to serialize error mesage")
+			}
+			return
+		}
+		next(i)(w, r)
+	}
+}
+
+func handleCreateParty(l logrus.FieldLogger) func(span opentracing.Span) func(input *inputDataContainer) http.HandlerFunc {
+	return func(span opentracing.Span) func(input *inputDataContainer) http.HandlerFunc {
+		return func(input *inputDataContainer) http.HandlerFunc {
+			return func(w http.ResponseWriter, r *http.Request) {
+				producers.CreateParty(l, span)(input.Data.Attributes.WorldId, input.Data.Attributes.ChannelId, input.Data.Attributes.CharacterId)
+				w.WriteHeader(http.StatusAccepted)
+			}
+		}
 	}
 }
 
@@ -124,8 +206,8 @@ func MakePartyRelationships(p *Model) map[string]*response.Relationship {
 	result["members"] = &response.Relationship{
 		ToOneType: false,
 		Links: response.RelationshipLinks{
-			Self:    "/parties/" + strconv.Itoa(int(p.Id())) + "/relationships/members",
-			Related: "/parties/" + strconv.Itoa(int(p.Id())) + "/members",
+			Self:    "/ms/party/parties/" + strconv.Itoa(int(p.Id())) + "/relationships/members",
+			Related: "/ms/party/parties/" + strconv.Itoa(int(p.Id())) + "/members",
 		},
 		Data: makeMemberRelationshipData(p.Members()),
 	}
