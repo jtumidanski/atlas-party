@@ -55,6 +55,7 @@ func handleLeaveParty(l logrus.FieldLogger) func(span opentracing.Span) func(par
 				return func(input *inputDataContainer) http.HandlerFunc {
 					return func(w http.ResponseWriter, r *http.Request) {
 						producers.LeaveParty(l, span)(input.Data.Attributes.WorldId, input.Data.Attributes.ChannelId, memberId)
+						w.WriteHeader(http.StatusAccepted)
 					}
 				}
 			}
