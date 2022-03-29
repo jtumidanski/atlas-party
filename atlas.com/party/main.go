@@ -2,7 +2,7 @@ package main
 
 import (
 	"atlas-party/character"
-	"atlas-party/kafka/consumers"
+	"atlas-party/kafka"
 	"atlas-party/logger"
 	"atlas-party/party"
 	"atlas-party/rest"
@@ -16,6 +16,7 @@ import (
 )
 
 const serviceName = "atlas-party"
+const consumerGroupId = "Party Orchestration Service"
 
 func main() {
 	l := logger.CreateLogger(serviceName)
@@ -29,13 +30,19 @@ func main() {
 		l.WithError(err).Fatal("Unable to initialize tracer.")
 	}
 	defer func(tc io.Closer) {
-		err := tc.Close()
+		err = tc.Close()
 		if err != nil {
 			l.WithError(err).Errorf("Unable to close tracer.")
 		}
 	}(tc)
 
-	consumers.CreateEventConsumers(l, ctx, wg)
+	kafka.CreateConsumers(l, ctx, wg,
+		character.StatusConsumer(consumerGroupId),
+		party.CreateConsumer(consumerGroupId),
+		party.ExpelConsumer(consumerGroupId),
+		party.JoinConsumer(consumerGroupId),
+		party.LeaveConsumer(consumerGroupId),
+		party.PromoteLeaderConsumer(consumerGroupId))
 
 	rest.CreateService(l, ctx, wg, "/ms/party", party.InitResource, character.InitResource)
 

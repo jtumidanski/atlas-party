@@ -1,7 +1,6 @@
 package party
 
 import (
-	"atlas-party/kafka/producers"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 )
@@ -44,7 +43,7 @@ func Create(l logrus.FieldLogger, span opentracing.Span) func(characterId uint32
 	return func(characterId uint32, worldId byte, channelId byte) {
 		p := GetRegistry().Create(worldId, channelId, characterId)
 		l.Debugf("Party %d created by character %d in world %d.", p.Id(), p.LeaderId(), worldId)
-		producers.PartyCreated(l, span)(worldId, p.Id(), characterId)
+		emitPartyCreated(l, span)(worldId, p.Id(), characterId)
 	}
 }
 
@@ -60,12 +59,12 @@ func Leave(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, chann
 
 		if current == nil {
 			l.Debugf("As a result, party %d will be disbanded.", previous.Id())
-			producers.PartyDisbanded(l, span)(previous.Members()[0].WorldId(), previous.Id(), characterId)
+			emitPartyDisbanded(l, span)(previous.Members()[0].WorldId(), previous.Id(), characterId)
 			for _, m := range previous.Members() {
-				producers.PartyMemberDisbanded(l, span)(m.WorldId(), m.ChannelId(), previous.Id(), m.CharacterId())
+				emitPartyMemberDisbanded(l, span)(m.WorldId(), m.ChannelId(), previous.Id(), m.CharacterId())
 			}
 		} else {
-			producers.PartyMemberLeave(l, span)(worldId, channelId, previous.Id(), characterId)
+			emitPartyMemberLeave(l, span)(worldId, channelId, previous.Id(), characterId)
 		}
 	}
 }
@@ -79,7 +78,7 @@ func Expel(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, chann
 		}
 
 		l.Debugf("Character %d was expelled from party %d.", characterId, previous.Id())
-		producers.PartyMemberExpelled(l, span)(worldId, channelId, previous.Id(), characterId)
+		emitPartyMemberExpelled(l, span)(worldId, channelId, previous.Id(), characterId)
 	}
 }
 
@@ -90,7 +89,7 @@ func Join(l logrus.FieldLogger, span opentracing.Span) func(worldId byte, channe
 			l.WithError(err).Errorf("Character %d was unable to join party %d.", characterId, partyId)
 			return
 		}
-		producers.PartyMemberJoin(l, span)(worldId, channelId, partyId, characterId)
+		emitPartyMemberJoin(l, span)(worldId, channelId, partyId, characterId)
 	}
 }
 
@@ -101,7 +100,7 @@ func PromoteNewLeader(l logrus.FieldLogger, span opentracing.Span) func(worldId 
 			l.WithError(err).Errorf("Character %d was unable to become the new leader of party %d.", characterId, partyId)
 			return
 		}
-		producers.PartyMemberPromoted(l, span)(worldId, channelId, partyId, characterId)
+		emitPartyMemberPromoted(l, span)(worldId, channelId, partyId, characterId)
 	}
 }
 
@@ -112,7 +111,7 @@ func MemberLogin(l logrus.FieldLogger, span opentracing.Span) func(characterId u
 			l.WithError(err).Errorf("Unable to mark character %d as online for party.", characterId)
 			return
 		}
-		producers.PartyMemberLogin(l, span)(worldId, channelId, p.Id(), characterId)
+		emitPartyMemberLogin(l, span)(worldId, channelId, p.Id(), characterId)
 	}
 }
 
@@ -123,6 +122,6 @@ func MemberLogout(l logrus.FieldLogger, span opentracing.Span) func(characterId 
 			l.WithError(err).Errorf("Unable to mark character %d as offline for party.", characterId)
 			return
 		}
-		producers.PartyMemberLogout(l, span)(worldId, channelId, p.Id(), characterId)
+		emitPartyMemberLogout(l, span)(worldId, channelId, p.Id(), characterId)
 	}
 }

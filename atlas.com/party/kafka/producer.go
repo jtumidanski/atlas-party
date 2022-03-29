@@ -1,4 +1,4 @@
-package producers
+package kafka
 
 import (
 	"atlas-party/retry"
@@ -29,14 +29,14 @@ func ProduceEvent(l logrus.FieldLogger, span opentracing.Span, topicToken string
 	}
 
 	return func(key []byte, event interface{}) {
-		r, err := json.Marshal(event)
-		l.WithField("message", string(r)).Debugf("Writing message to topic %s.", name)
+		value, err := json.Marshal(event)
+		l.WithField("message", string(value)).Debugf("Writing message to topic %s.", name)
 		if err != nil {
 			l.WithError(err).Fatalf("Unable to marshall event for topic %s.", name)
 		}
 
 		writeMessage := func(attempt int) (bool, error) {
-			m := kafka.Message{Key: key, Value: r}
+			m := kafka.Message{Key: key, Value: value}
 			headers := make(map[string]string)
 			err = opentracing.GlobalTracer().Inject(span.Context(), opentracing.TextMap, opentracing.TextMapCarrier(headers))
 			if err != nil {

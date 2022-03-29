@@ -2,7 +2,6 @@ package party
 
 import (
 	"atlas-party/json"
-	"atlas-party/kafka/producers"
 	"atlas-party/party/member"
 	"atlas-party/rest"
 	"atlas-party/rest/resource"
@@ -54,7 +53,7 @@ func handleLeaveParty(l logrus.FieldLogger) func(span opentracing.Span) func(par
 			return func(memberId uint32) func(input *inputDataContainer) http.HandlerFunc {
 				return func(input *inputDataContainer) http.HandlerFunc {
 					return func(w http.ResponseWriter, r *http.Request) {
-						producers.LeaveParty(l, span)(input.Data.Attributes.WorldId, input.Data.Attributes.ChannelId, memberId)
+						emitLeaveParty(l, span)(input.Data.Attributes.WorldId, input.Data.Attributes.ChannelId, memberId)
 						w.WriteHeader(http.StatusAccepted)
 					}
 				}
@@ -130,7 +129,7 @@ func handleCreateParty(l logrus.FieldLogger) func(span opentracing.Span) func(in
 	return func(span opentracing.Span) func(input *inputDataContainer) http.HandlerFunc {
 		return func(input *inputDataContainer) http.HandlerFunc {
 			return func(w http.ResponseWriter, r *http.Request) {
-				producers.CreateParty(l, span)(input.Data.Attributes.WorldId, input.Data.Attributes.ChannelId, input.Data.Attributes.CharacterId)
+				emitCreateParty(l, span)(input.Data.Attributes.WorldId, input.Data.Attributes.ChannelId, input.Data.Attributes.CharacterId)
 				w.WriteHeader(http.StatusAccepted)
 			}
 		}
@@ -276,7 +275,7 @@ func handleJoinParty(l logrus.FieldLogger) func(span opentracing.Span) func(part
 				}
 
 				attr := li.Data.Attributes
-				producers.JoinParty(l, span)(attr.WorldId, attr.ChannelId, partyId, attr.CharacterId)
+				emitJoinParty(l, span)(attr.WorldId, attr.ChannelId, partyId, attr.CharacterId)
 				w.WriteHeader(http.StatusAccepted)
 			}
 		}
