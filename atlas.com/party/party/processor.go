@@ -1,41 +1,40 @@
 package party
 
 import (
+	"atlas-party/model"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 )
 
-type ModelProvider func() (*Model, error)
-
-func ByIdModelProvider(_ logrus.FieldLogger, _ opentracing.Span) func(partyId uint32) ModelProvider {
-	return func(partyId uint32) ModelProvider {
-		return func() (*Model, error) {
+func ByIdModelProvider(_ logrus.FieldLogger, _ opentracing.Span) func(partyId uint32) model.Provider[Model] {
+	return func(partyId uint32) model.Provider[Model] {
+		return func() (Model, error) {
 			return GetRegistry().Get(partyId)
 		}
 	}
 }
 
-func ByMemberModelProvider(_ logrus.FieldLogger, _ opentracing.Span) func(characterId uint32) ModelProvider {
-	return func(characterId uint32) ModelProvider {
-		return func() (*Model, error) {
+func ByMemberModelProvider(_ logrus.FieldLogger, _ opentracing.Span) func(characterId uint32) model.Provider[Model] {
+	return func(characterId uint32) model.Provider[Model] {
+		return func() (Model, error) {
 			return GetRegistry().GetForMember(characterId)
 		}
 	}
 }
 
-func GetById(l logrus.FieldLogger, span opentracing.Span) func(partyId uint32) (*Model, error) {
-	return func(partyId uint32) (*Model, error) {
+func GetById(l logrus.FieldLogger, span opentracing.Span) func(partyId uint32) (Model, error) {
+	return func(partyId uint32) (Model, error) {
 		return ByIdModelProvider(l, span)(partyId)()
 	}
 }
 
-func GetByMember(l logrus.FieldLogger, span opentracing.Span) func(characterId uint32) (*Model, error) {
-	return func(characterId uint32) (*Model, error) {
+func GetByMember(l logrus.FieldLogger, span opentracing.Span) func(characterId uint32) (Model, error) {
+	return func(characterId uint32) (Model, error) {
 		return ByMemberModelProvider(l, span)(characterId)()
 	}
 }
 
-func GetAll() []*Model {
+func GetAll() []Model {
 	return GetRegistry().GetAll()
 }
 

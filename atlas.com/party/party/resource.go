@@ -201,7 +201,7 @@ func handleGetParty(l logrus.FieldLogger) func(span opentracing.Span) func(party
 	}
 }
 
-func MakePartyRelationships(p *Model) map[string]*response.Relationship {
+func MakePartyRelationships(p Model) map[string]*response.Relationship {
 	result := make(map[string]*response.Relationship, 0)
 	result["members"] = &response.Relationship{
 		ToOneType: false,

@@ -142,36 +142,36 @@ func (r *registry) PromoteNewLeader(id uint32, characterId uint32) (*Model, erro
 	return nil, errors.New("unable to locate party")
 }
 
-func (r *registry) Get(id uint32) (*Model, error) {
+func (r *registry) Get(id uint32) (Model, error) {
 	r.lock.RLock()
 	if val, ok := r.parties[id]; ok {
 		r.lock.RUnlock()
-		return val, nil
+		return *val, nil
 	}
 	r.lock.RUnlock()
-	return nil, errors.New("unable to locate party")
+	return Model{}, errors.New("unable to locate party")
 }
 
-func (r *registry) GetAll() []*Model {
+func (r *registry) GetAll() []Model {
 	r.lock.RLock()
-	result := make([]*Model, 0)
+	result := make([]Model, 0)
 	for _, p := range r.parties {
-		result = append(result, p)
+		result = append(result, *p)
 	}
 	r.lock.RUnlock()
 	return result
 }
 
-func (r *registry) GetForMember(characterId uint32) (*Model, error) {
+func (r *registry) GetForMember(characterId uint32) (Model, error) {
 	r.lock.RLock()
 	if pid, ok := r.characterParty[characterId]; ok {
 		if val, ok := r.parties[pid]; ok {
 			r.lock.RUnlock()
-			return val, nil
+			return *val, nil
 		}
 	}
 	r.lock.RUnlock()
-	return nil, errors.New("unable to locate party for member")
+	return Model{}, errors.New("unable to locate party for member")
 }
 
 func (r *registry) getNextId() uint32 {
